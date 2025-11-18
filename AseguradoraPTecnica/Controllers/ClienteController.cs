@@ -15,7 +15,7 @@ namespace AseguradoraPTecnica.Controllers
             _clienteService = clienteService;
         }
 
-        [HttpGet]
+        [HttpGet("GetAll")]
         public async Task<ActionResult<object>> GetAll()
         {
             try
