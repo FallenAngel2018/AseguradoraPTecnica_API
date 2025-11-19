@@ -1,7 +1,7 @@
 ﻿using AseguradoraPTecnica.Business.Interfaces;
 using AseguradoraPTecnica.Data.Interfaces;
 using AseguradoraPTecnica.Models.Entities;
-using AseguradoraPTecnica.Models.DTOs;
+using AseguradoraPTecnica.Models.DTOs.Cliente;
 
 namespace AseguradoraPTecnica.Business.Services
 {
@@ -158,7 +158,6 @@ namespace AseguradoraPTecnica.Business.Services
             }
         }
 
-        // ✅ ELIMINAR CLIENTE
         public async Task<long> DeleteClienteAsync(Cliente cliente)
         {
             try
@@ -180,6 +179,15 @@ namespace AseguradoraPTecnica.Business.Services
                 throw;
             }
         }
+
+        public async Task<ResultadoIngresoClientesDTO> InsertarMultiplesClientesAsync(List<Cliente> clientes)
+        {
+            var resultado = await _clienteRepository.InsertarMultiplesClientesAsync(clientes);
+
+            return resultado;
+        }
+
+
 
         private static ClienteDTO MapearDTO(Cliente cliente)
         {

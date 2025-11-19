@@ -1,8 +1,10 @@
+using AseguradoraPTecnica;
 using AseguradoraPTecnica.Business.Interfaces;
 using AseguradoraPTecnica.Business.Services;
 using AseguradoraPTecnica.Data.Context;
 using AseguradoraPTecnica.Data.Interfaces;
 using AseguradoraPTecnica.Data.Repositories;
+using OfficeOpenXml;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,14 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.OperationFilter<FileUploadOperationFilter>();
+});
+
+ExcelPackage.License.SetNonCommercialPersonal("Isaac OBesso");
+
 
 var app = builder.Build();
 

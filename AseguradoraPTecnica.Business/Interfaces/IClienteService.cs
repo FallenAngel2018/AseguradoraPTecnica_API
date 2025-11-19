@@ -1,5 +1,5 @@
 ﻿using AseguradoraPTecnica.Models.Entities;
-using AseguradoraPTecnica.Models.DTOs;
+using AseguradoraPTecnica.Models.DTOs.Cliente;
 
 namespace AseguradoraPTecnica.Business.Interfaces
 {
@@ -15,5 +15,6 @@ namespace AseguradoraPTecnica.Business.Interfaces
         Task<ClienteDTO> CreateClienteAsync(Cliente cliente);
         Task<long> UpdateClienteAsync(Cliente cliente);
         Task<long> DeleteClienteAsync(Cliente cliente);
+        Task<ResultadoIngresoClientesDTO> InsertarMultiplesClientesAsync(List<Cliente> clientes);
     }
 }

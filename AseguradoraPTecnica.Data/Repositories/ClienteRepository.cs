@@ -1,8 +1,9 @@
-﻿using System.Data;
-using Microsoft.Data.SqlClient;
-using AseguradoraPTecnica.Data.Context;
+﻿using AseguradoraPTecnica.Data.Context;
 using AseguradoraPTecnica.Data.Interfaces;
+using AseguradoraPTecnica.Models.DTOs.Cliente;
 using AseguradoraPTecnica.Models.Entities;
+using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace AseguradoraPTecnica.Data.Repositories
 {
@@ -331,6 +332,99 @@ namespace AseguradoraPTecnica.Data.Repositories
                 throw;
             }
         }
+
+        public async Task<ResultadoIngresoClientesDTO> InsertarMultiplesClientesAsync(List<Cliente> clientes)
+        {
+            var resultado = new ResultadoIngresoClientesDTO
+            {
+                ClientesInsertados = new List<ClienteDTO>(),
+                ClientesErrores = new List<ClienteErrorDTO>()
+            };
+
+            try
+            {
+                using (var connection = _databaseConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = new SqlCommand("apt_cliente_ingreso_masivo", connection))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandTimeout = SqlCommandTimeout_Segs;
+
+                        // Crear DataTable para el TVP
+                        var table = new DataTable();
+                        table.Columns.Add("Cedula", typeof(string));
+                        table.Columns.Add("Nombres", typeof(string));
+                        table.Columns.Add("Apellidos", typeof(string));
+                        table.Columns.Add("Telefono", typeof(string));
+                        table.Columns.Add("Edad", typeof(string));
+
+                        foreach (var c in clientes)
+                        {
+                            table.Rows.Add(
+                                c.Cedula,
+                                c.Nombres,
+                                c.Apellidos,
+                                c.Telefono,
+                                c.Edad.ToString()
+                            );
+                        }
+
+                        var tvpParam = command.Parameters.AddWithValue("@Clientes", table);
+                        tvpParam.SqlDbType = SqlDbType.Structured;
+                        tvpParam.TypeName = "dbo.ClienteTableType";
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            // Primer resultado: clientes insertados bien
+                            while (await reader.ReadAsync())
+                            {
+                                resultado.ClientesInsertados.Add(new ClienteDTO
+                                {
+                                    IdAsegurado = reader.GetInt64(0),
+                                    Cedula = reader.GetString(1),
+                                    Nombres = reader.GetString(2),
+                                    Apellidos = reader.GetString(3),
+                                    Telefono = reader.GetString(4),
+                                    Edad = reader.GetInt32(5),
+                                    Estado = reader.GetInt32(6),
+                                });
+                            }
+
+                            if (await reader.NextResultAsync())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    while (await reader.ReadAsync())
+                                    {
+                                        resultado.ClientesErrores.Add(new ClienteErrorDTO
+                                        {
+                                            Cedula = reader.IsDBNull(0) ? null : reader.GetString(0),
+                                            Nombres = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                            Apellidos = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                            Telefono = reader.IsDBNull(3) ? null : reader.GetString(3),
+
+                                            Edad = reader.IsDBNull(4) ? null : reader.GetValue(4).ToString(),
+
+                                            ErrorMensaje = "Cliente duplicado" // Como tú tienes solo ese caso en SP
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error en InsertarMultiplesClientesAsync: {ex.Message}", ex);
+            }
+
+            return resultado;
+        }
+
+
 
     }
 }

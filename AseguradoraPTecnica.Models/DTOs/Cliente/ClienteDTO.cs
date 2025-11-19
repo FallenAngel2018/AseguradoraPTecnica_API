@@ -1,4 +1,4 @@
-﻿namespace AseguradoraPTecnica.Models.DTOs
+﻿namespace AseguradoraPTecnica.Models.DTOs.Cliente
 {
     public class ClienteDTO
     {

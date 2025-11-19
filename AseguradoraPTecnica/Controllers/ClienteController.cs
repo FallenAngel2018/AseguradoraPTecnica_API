@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using AseguradoraPTecnica.Business.Interfaces;
 using AseguradoraPTecnica.Models.Entities;
+using AseguradoraPTecnica.Utils;
 
 namespace AseguradoraPTecnica.Controllers
 {
@@ -121,8 +122,83 @@ namespace AseguradoraPTecnica.Controllers
             }
         }
 
+        [HttpPost("cargar-archivo-ingreso-clientes")]
+        [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<ActionResult<object>> IngresarMultiplesClientesPorArchivo([FromForm] IFormFile archivo)
+        {
+            try
+            {
+                if (archivo == null || archivo.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "No se recibió ningún archivo"
+                    });
+                }
 
-        
+                var extension = Path.GetExtension(archivo.FileName).ToLower();
+
+                if (extension != ".xlsx" && extension != ".txt")
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Solo se permiten archivos .xlsx o .txt"
+                    });
+                }
+
+                if (archivo.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "El archivo no debe superar los 5MB"
+                    });
+                }
+
+                List<Cliente> clientes;
+
+                if (extension == ".txt")
+                {
+                    clientes = await FileUtils.LeerClientesDesdeTxtAsync(archivo);
+                }
+                else
+                {
+                    clientes = await FileUtils.LeerClientesDesdeXlsx(archivo);
+                }
+
+                var resultado = await _clienteService.InsertarMultiplesClientesAsync(clientes);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Archivo '{archivo.FileName}' procesado correctamente ({archivo.Length} bytes)",
+                    data = new
+                    {
+                        clientesInsertados = resultado.ClientesInsertados,
+                        clientesConError = resultado.ClientesErrores,
+                        nombreArchivo = archivo.FileName,
+                        tamano = archivo.Length,
+                        tipo = archivo.ContentType,
+                        extension = extension
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Error al procesar el archivo"
+                });
+            }
+        }
+
+
+
+
 
 
 
