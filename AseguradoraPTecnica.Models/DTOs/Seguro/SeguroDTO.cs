@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AseguradoraPTecnica.Models.Entities
+namespace AseguradoraPTecnica.Models.DTOs.Seguro
 {
-    public class Seguro
+    public class SeguroDTO
     {
         public long IdSeguro { get; set; }
         public string? Codigo { get; set; }

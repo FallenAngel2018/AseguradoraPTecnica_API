@@ -1,4 +1,5 @@
 ﻿using AseguradoraPTecnica.Models.Entities;
+using ClosedXML.Excel;
 using OfficeOpenXml;
 
 namespace AseguradoraPTecnica.Utils
@@ -38,41 +39,105 @@ namespace AseguradoraPTecnica.Utils
             return clientes;
         }
 
-
-        public static async Task<List<Cliente>> LeerClientesDesdeXlsx(IFormFile archivo)
+        public static async Task<List<Cliente>> LeerClientesDesdeXlsxAsync(IFormFile archivo)
         {
-            using var stream = archivo.OpenReadStream();
-            stream.Position = 0;
-
             var clientes = new List<Cliente>();
 
-            using (var package = new ExcelPackage())
+            var validacionColumnas = ValidarColumnasXlsx(archivo);
+            if (!validacionColumnas.esValido)
             {
-                await package.LoadAsync(stream);
-                var worksheet = package.Workbook.Worksheets[0];
+                throw new Exception(validacionColumnas.mensaje);
+            }
 
-                var filaInicio = worksheet.Dimension.Start.Row;
-                var totalFilas = worksheet.Dimension.End.Row;
+            try
+            {
+                using var streamOriginal = archivo.OpenReadStream();
+                var memoryStream = new MemoryStream();
+                await streamOriginal.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
 
-                // Saltar encabezado
-                for (int fila = filaInicio + 1; fila <= totalFilas; fila++)
+                using var workbook = new XLWorkbook(memoryStream);
+                var worksheet = workbook.Worksheet(1);
+
+                if (worksheet == null)
+                    return clientes;
+
+                var firstRow = worksheet.FirstRowUsed();
+                if (firstRow == null)
+                    return clientes;
+
+                var currentRow = firstRow.RowBelow();
+
+                while (!currentRow.IsEmpty())
                 {
-                    var cliente = new Cliente
+                    var cedula = currentRow.Cell(1).GetString().Trim();
+                    if (string.IsNullOrEmpty(cedula))
                     {
-                        Cedula = worksheet.Cells[fila, 1].Value?.ToString()?.Trim(),
-                        Nombres = worksheet.Cells[fila, 2].Value?.ToString()?.Trim(),
-                        Apellidos = worksheet.Cells[fila, 3].Value?.ToString()?.Trim(),
-                        Telefono = worksheet.Cells[fila, 4].Value?.ToString()?.Trim(),
-                        Edad = int.Parse(worksheet.Cells[fila, 5].Value?.ToString()?.Trim())
-                    };
+                        currentRow = currentRow.RowBelow();
+                        continue;
+                    }
 
-                    clientes.Add(cliente);
+                    int edad = 0;
+                    int.TryParse(currentRow.Cell(5).GetString().Trim(), out edad);
+
+                    clientes.Add(new Cliente
+                    {
+                        Cedula = cedula,
+                        Nombres = currentRow.Cell(2).GetString().Trim(),
+                        Apellidos = currentRow.Cell(3).GetString().Trim(),
+                        Telefono = currentRow.Cell(4).GetString().Trim(),
+                        Edad = edad,
+                        Estado = 1
+                    });
+
+                    currentRow = currentRow.RowBelow();
                 }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
 
             return clientes;
         }
 
+
+
+        public static (bool esValido, string mensaje) ValidarColumnasXlsx(IFormFile archivo)
+        {
+            try
+            {
+                using var stream = archivo.OpenReadStream();
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheet(1); // Primera hoja
+
+                if (worksheet == null)
+                    return (false, "El archivo XLSX no contiene hojas de trabajo");
+
+                var firstRow = worksheet.FirstRowUsed();
+                if (firstRow == null)
+                    return (false, "La hoja de trabajo está vacía");
+
+                var columnasEsperadas = new[] { "Cedula", "Nombres", "Apellidos", "Telefono", "Edad" };
+
+                for (int i = 0; i < columnasEsperadas.Length; i++)
+                {
+                    var valorCelda = firstRow.Cell(i + 1).GetString().Trim();
+
+                    if (string.IsNullOrEmpty(valorCelda))
+                        return (false, $"La columna {i + 1} en el encabezado está vacía");
+
+                    if (!valorCelda.Equals(columnasEsperadas[i], StringComparison.OrdinalIgnoreCase))
+                        return (false, $"La columna {i + 1} debe ser '{columnasEsperadas[i]}', pero se encontró '{valorCelda}'");
+                }
+
+                return (true, "Validación de columnas exitosa");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error al validar columnas: {ex.Message}");
+            }
+        }
 
 
 

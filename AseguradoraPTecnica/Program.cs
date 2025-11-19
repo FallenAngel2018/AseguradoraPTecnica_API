@@ -17,6 +17,10 @@ builder.Services.AddScoped<DatabaseConnection>(provider =>
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 
+builder.Services.AddScoped<ISeguroRepository, SeguroRepository>();
+builder.Services.AddScoped<ISeguroService, SeguroService>();
+
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

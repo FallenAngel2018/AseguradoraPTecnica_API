@@ -35,7 +35,7 @@ namespace AseguradoraPTecnica.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Error interno del servidor"
+                    message = "Error interno del servidor: " + ex.Message
                 });
             }
         }
@@ -166,7 +166,7 @@ namespace AseguradoraPTecnica.Controllers
                 }
                 else
                 {
-                    clientes = await FileUtils.LeerClientesDesdeXlsx(archivo);
+                    clientes = await FileUtils.LeerClientesDesdeXlsxAsync(archivo);
                 }
 
                 var resultado = await _clienteService.InsertarMultiplesClientesAsync(clientes);

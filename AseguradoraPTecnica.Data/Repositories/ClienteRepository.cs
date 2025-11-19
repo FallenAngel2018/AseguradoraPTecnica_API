@@ -30,7 +30,7 @@ namespace AseguradoraPTecnica.Data.Repositories
                 {
                     await connection.OpenAsync();
 
-                    using (var command = new SqlCommand("apt_cliente_consultas", connection))
+                    using (var command = new SqlCommand(SP_CLIENTE_CONSULTAR, connection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
                         command.CommandTimeout = SqlCommandTimeout_Segs;
@@ -69,7 +69,7 @@ namespace AseguradoraPTecnica.Data.Repositories
                 {
                     await connection.OpenAsync();
 
-                    using (var command = new SqlCommand("apt_cliente_consultas", connection))
+                    using (var command = new SqlCommand(SP_CLIENTE_CONSULTAR, connection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
                         command.CommandTimeout = SqlCommandTimeout_Segs;
