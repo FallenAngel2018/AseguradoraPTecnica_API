@@ -29,6 +29,32 @@ namespace AseguradoraPTecnica.Business.Services
             }
         }
 
+        public async Task<Seguro> GetByIdAsync(string codSeguro)
+        {
+            try
+            {
+                var seguro = await _seguroRepository.GetByIdAsync(codSeguro);
+                return seguro;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<Seguro> AddAsync(Seguro seguro)
+        {
+            try
+            {
+                var seguroCreado = await _seguroRepository.AddAsync(seguro);
+                return seguroCreado;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
 
         private static SeguroDTO MapearDTO(Seguro seguro)
         {
@@ -44,5 +70,7 @@ namespace AseguradoraPTecnica.Business.Services
                 Estado = seguro.Estado
             };
         }
+
+        
     }
 }

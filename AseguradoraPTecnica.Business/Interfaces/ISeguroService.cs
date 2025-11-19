@@ -6,5 +6,8 @@ namespace AseguradoraPTecnica.Business.Interfaces
     public interface ISeguroService
     {
         Task<IEnumerable<SeguroDTO>> GetAllAsync();
+        Task<Seguro> GetByIdAsync(string codSeguro);
+        Task<Seguro> AddAsync(Seguro seguro);
+
     }
 }
