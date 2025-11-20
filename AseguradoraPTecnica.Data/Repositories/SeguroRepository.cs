@@ -1,5 +1,6 @@
 ﻿using AseguradoraPTecnica.Data.Context;
 using AseguradoraPTecnica.Data.Interfaces;
+using AseguradoraPTecnica.Models.DTOs.Seguro;
 using AseguradoraPTecnica.Models.Entities;
 using Microsoft.Data.SqlClient;
 using System;
@@ -16,7 +17,9 @@ namespace AseguradoraPTecnica.Data.Repositories
 
         private readonly DatabaseConnection _databaseConnection;
         private const string SP_SEGURO_CONSULTAR = "apt_seguro_consultas";
+        private const string SP_SEGURO_CONSULTAR_ASIGNADOS = "apt_seguro_consultar_asignados";
         private const string SP_SEGURO_GESTION = "apt_seguro_gestion";
+        private const string SP_ASIGNAR_SEGURO_GESTION = "apt_cliente_asignar_seguros_gestion";
         private const int SqlCommandTimeout_Segs = 30;
 
         public SeguroRepository(DatabaseConnection databaseConnection)
@@ -63,7 +66,6 @@ namespace AseguradoraPTecnica.Data.Repositories
             }
         }
 
-
         public async Task<Seguro> GetByIdAsync(string codSeguro)
         {
             var seguro = new Seguro();
@@ -102,6 +104,87 @@ namespace AseguradoraPTecnica.Data.Repositories
                 throw;
             }
         }
+
+        public async Task<List<SeguroAsignadoDetalle>> GetSegurosAsignadosAsync()
+        {
+            var seguros = new List<SeguroAsignadoDetalle>();
+
+            try
+            {
+                using (var connection = _databaseConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = new SqlCommand(SP_SEGURO_CONSULTAR_ASIGNADOS, connection))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandTimeout = SqlCommandTimeout_Segs;
+
+                        command.Parameters.Add("@cedula", SqlDbType.VarChar, 50).Value = DBNull.Value;
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var seguro = MapearSeguroAsignadoDetalle(reader);
+                                seguros.Add(seguro);
+                            }
+                        }
+                    }
+                }
+
+                return seguros;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Error en la base de datos: {ex.Message}", ex);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<List<SeguroAsignadoDetalle>> GetAssignedInsurancesDetailsByCedulaAsync(string cedula)
+        {
+            var seguros = new List<SeguroAsignadoDetalle>();
+
+            try
+            {
+                using (var connection = _databaseConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = new SqlCommand(SP_SEGURO_CONSULTAR_ASIGNADOS, connection))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandTimeout = SqlCommandTimeout_Segs;
+
+                        command.Parameters.Add("@cedula", SqlDbType.VarChar, 50).Value = cedula;
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var seguro = MapearSeguroAsignadoDetalle(reader);
+                                seguros.Add(seguro);
+                            }
+                        }
+                    }
+                }
+
+                return seguros;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Error en la base de datos: {ex.Message}", ex);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
 
         public async Task<Seguro> AddAsync(Seguro seguro)
         {
@@ -155,6 +238,52 @@ namespace AseguradoraPTecnica.Data.Repositories
             }
         }
 
+        public async Task<List<SeguroAsignadoDetalle>> AssignInsurancesAsync(SeguroAsignado seguro)
+        {
+            var segurosAsignados = new List<SeguroAsignadoDetalle>();
+
+            try
+            {
+                DataTable dtCodigos = new DataTable();
+                dtCodigos.Columns.Add("Codigo", typeof(string));
+
+                foreach (var codigo in seguro.CodigosSeguros)
+                {
+                    if (!string.IsNullOrWhiteSpace(codigo))
+                        dtCodigos.Rows.Add(codigo);
+                }
+
+                using (var connection = _databaseConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+
+                    using (var command = new SqlCommand(SP_ASIGNAR_SEGURO_GESTION, connection))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandTimeout = SqlCommandTimeout_Segs;
+
+                        command.Parameters.Add("@cedula", SqlDbType.VarChar, 50).Value = seguro.Cedula;
+                        var tvp = command.Parameters.AddWithValue("@codigos", dtCodigos);
+                        tvp.SqlDbType = SqlDbType.Structured;
+                        tvp.TypeName = "dbo.CodigosSegurosType";
+                        command.Parameters.Add("@estado", SqlDbType.Int).Value = seguro.Estado;
+
+                        using (var reader = await command.ExecuteReaderAsync()) { }
+                    }
+                }
+
+                return segurosAsignados;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Error en la base de datos: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
 
 
         private static Seguro MapearSeguro(SqlDataReader reader)
@@ -188,6 +317,32 @@ namespace AseguradoraPTecnica.Data.Repositories
             return seguro;
         }
 
+        private static SeguroAsignadoDetalle MapearSeguroAsignadoDetalle(SqlDataReader reader)
+        {
+            var detalle = new SeguroAsignadoDetalle();
+
+            if (reader.HasColumn("IdSeguroAsignado") && !reader.IsDBNull(reader.GetOrdinal("IdSeguroAsignado")))
+                detalle.IdSeguroAsignado = reader.GetInt64(reader.GetOrdinal("IdSeguroAsignado"));
+
+            if (reader.HasColumn("Cedula") && !reader.IsDBNull(reader.GetOrdinal("Cedula")))
+                detalle.Cedula = reader.GetString(reader.GetOrdinal("Cedula"));
+
+            if (reader.HasColumn("Nombres") && !reader.IsDBNull(reader.GetOrdinal("Nombres")))
+                detalle.Nombres = reader.GetString(reader.GetOrdinal("Nombres"));
+
+            if (reader.HasColumn("CodSeguro") && !reader.IsDBNull(reader.GetOrdinal("CodSeguro")))
+                detalle.CodSeguro = reader.GetString(reader.GetOrdinal("CodSeguro"));
+
+            if (reader.HasColumn("NombreSeguro") && !reader.IsDBNull(reader.GetOrdinal("NombreSeguro")))
+                detalle.NombreSeguro = reader.GetString(reader.GetOrdinal("NombreSeguro"));
+
+            if (reader.HasColumn("Estado") && !reader.IsDBNull(reader.GetOrdinal("Estado")))
+                detalle.Estado = reader.GetInt32(reader.GetOrdinal("Estado"));
+
+            return detalle;
+        }
+
+        
 
     }
 
