@@ -18,8 +18,10 @@ namespace AseguradoraPTecnica.Data.Repositories
         private readonly DatabaseConnection _databaseConnection;
         private const string SP_SEGURO_CONSULTAR = "apt_seguro_consultas";
         private const string SP_SEGURO_CONSULTAR_ASIGNADOS = "apt_seguro_consultar_asignados";
+        private const string SP_SEGURO_CLIENTES_BUSQUEDA_ASIGNADOS = "apt_seguros_clientes_busqueda_por_cedula_codseguro";
         private const string SP_SEGURO_GESTION = "apt_seguro_gestion";
         private const string SP_ASIGNAR_SEGURO_GESTION = "apt_cliente_asignar_seguros_gestion";
+        
         private const int SqlCommandTimeout_Segs = 30;
 
         public SeguroRepository(DatabaseConnection databaseConnection)
@@ -103,6 +105,35 @@ namespace AseguradoraPTecnica.Data.Repositories
             {
                 throw;
             }
+        }
+
+        public async Task<List<AssignedInsuranceOrClientDto>> GetAssignedInsurancesOrClientsAsync(BusquedaSeguroRequest busqueda)
+        {
+            var lista = new List<AssignedInsuranceOrClientDto>();
+
+            using (var connection = _databaseConnection.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                using (var command = new SqlCommand(SP_SEGURO_CLIENTES_BUSQUEDA_ASIGNADOS, connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    command.Parameters.AddWithValue("@Busqueda", busqueda.Busqueda);
+                    command.Parameters.AddWithValue("@Opcion", busqueda.Opcion);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var item = MapearAssignedInsuranceOrClientDto(reader);
+                            lista.Add(item);
+                        }
+                    }
+                }
+            }
+
+            return lista;
         }
 
         public async Task<List<SeguroAsignadoDetalle>> GetSegurosAsignadosAsync()
@@ -342,7 +373,31 @@ namespace AseguradoraPTecnica.Data.Repositories
             return detalle;
         }
 
-        
+
+        private AssignedInsuranceOrClientDto MapearAssignedInsuranceOrClientDto(SqlDataReader reader)
+        {
+            return new AssignedInsuranceOrClientDto
+            {
+                IdSeguroAsignado = reader.HasColumn("IdSeguroAsignado") && !reader.IsDBNull(reader.GetOrdinal("IdSeguroAsignado"))
+                                  ? reader.GetInt64(reader.GetOrdinal("IdSeguroAsignado")) : (long?)null,
+
+                CodSeguro = reader.HasColumn("CodSeguro") && !reader.IsDBNull(reader.GetOrdinal("CodSeguro"))
+                            ? reader.GetString(reader.GetOrdinal("CodSeguro")) : null,
+
+                NombreSeguro = reader.HasColumn("NombreSeguro") && !reader.IsDBNull(reader.GetOrdinal("NombreSeguro"))
+                               ? reader.GetString(reader.GetOrdinal("NombreSeguro")) : null,
+
+                Cedula = reader.HasColumn("Cedula") && !reader.IsDBNull(reader.GetOrdinal("Cedula"))
+                         ? reader.GetString(reader.GetOrdinal("Cedula")) : null,
+
+                Nombres = reader.HasColumn("Nombres") && !reader.IsDBNull(reader.GetOrdinal("Nombres"))
+                          ? reader.GetString(reader.GetOrdinal("Nombres")) : null,
+
+                Estado = reader.HasColumn("Estado") && !reader.IsDBNull(reader.GetOrdinal("Estado"))
+                         ? reader.GetInt32(reader.GetOrdinal("Estado")) : 0
+            };
+        }
+
 
     }
 

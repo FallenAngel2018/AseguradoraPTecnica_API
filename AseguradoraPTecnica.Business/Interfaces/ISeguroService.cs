@@ -9,6 +9,8 @@ namespace AseguradoraPTecnica.Business.Interfaces
         Task<IEnumerable<SeguroAsignadoDetalleDTO>> GetSegurosAsignadosAsync();
         Task<SeguroDTO?> GetByIdAsync(string codSeguro);
         Task<List<SeguroAsignadoDetalle>> GetAssignedInsurancesDetailsByCedulaAsync(string cedula);
+        Task<List<AssignedInsuranceOrClientDto>> GetAssignedInsurancesOrClientsAsync(BusquedaSeguroRequest busqueda);
+        
         Task<Seguro> AddAsync(Seguro seguro);
         Task<List<SeguroAsignadoDetalle>> AssignInsurancesAsync(SeguroAsignado seguro);
         

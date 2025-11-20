@@ -76,6 +76,24 @@ namespace AseguradoraPTecnica.Business.Services
             }
         }
 
+        public async Task<List<AssignedInsuranceOrClientDto>> GetAssignedInsurancesOrClientsAsync(BusquedaSeguroRequest busqueda)
+        {
+            if (busqueda == null || string.IsNullOrWhiteSpace(busqueda.Busqueda))
+            {
+                return new List<AssignedInsuranceOrClientDto>();
+            }
+
+            if (busqueda.Opcion != 1 && busqueda.Opcion != 2)
+            {
+                throw new ArgumentException("La opción de búsqueda debe ser 1 (por cédula) o 2 (por código de seguro).");
+            }
+
+            var resultados = await _seguroRepository.GetAssignedInsurancesOrClientsAsync(busqueda);
+
+            return resultados;
+        }
+
+
 
         public async Task<Seguro> AddAsync(Seguro seguro)
         {

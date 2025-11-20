@@ -1,6 +1,7 @@
 ﻿using AseguradoraPTecnica.Business.Interfaces;
 using AseguradoraPTecnica.Business.Services;
 using AseguradoraPTecnica.Data.Interfaces;
+using AseguradoraPTecnica.Models.DTOs.Seguro;
 using AseguradoraPTecnica.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -136,6 +137,75 @@ namespace AseguradoraPTecnica.Controllers
                 });
             }
         }
+
+        [HttpPost("BuscarSegurosContratados")]
+        public async Task<ActionResult<object>> BuscarSegurosContratados([FromBody] BusquedaSeguroRequest inputModel)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Modelo inválido",
+                    errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+                });
+            }
+
+            try
+            {
+                List<AssignedInsuranceOrClientDto> resultado;
+
+                if (inputModel.Opcion == 1) // Por cédula
+                {
+                    resultado = await _seguroService.GetAssignedInsurancesOrClientsAsync(inputModel);
+                }
+                else if (inputModel.Opcion == 2) // Por código de seguro
+                {
+                    resultado = await _seguroService.GetAssignedInsurancesOrClientsAsync(inputModel);
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Opción de búsqueda inválida"
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Consulta realizada exitosamente",
+                    data = resultado
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Error interno del servidor: " + ex.Message
+                });
+            }
+        }
+
+
 
         [HttpPost("GetSegurosAsignadosPorCedula")]
         public async Task<ActionResult<List<SeguroAsignadoDetalle>>> GetSegurosAsignadosPorCedula(string cedula)
